@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="_ds/modernist-d32a8102-822c-4ffd-a936-3fa1da7cbaea/styles.css">
+  <script src="_ds/modernist-d32a8102-822c-4ffd-a936-3fa1da7cbaea/_ds_bundle.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.js"></script>
+  <style>
+    body { margin: 0; }
+    input[type="date"]::-webkit-calendar-picker-indicator, input[type="month"]::-webkit-calendar-picker-indicator { filter: invert(0.2); cursor: pointer; }
+  </style>
+</helmet>
+<div style="min-height:100vh;background:var(--color-bg);color:var(--color-text);">
+
+  <div class="nav" style="flex-wrap:wrap;gap:var(--space-4);">
+    <img src="assets/isu-logo.jpeg" alt="Inter Soccer USA Academy" style="width:48px;height:48px;object-fit:contain;flex:none;" />
+    <div style="margin-right:auto;">
+      <div class="nav-brand">Inter Soccer USA Academy</div>
+      <div class="text-muted" style="font-size:12px;">Control de asistencia a entrenamientos</div>
+    </div>
+    <div class="seg" style="flex-wrap:wrap;">
+      <label class="seg-opt"><input type="radio" name="tab" checked="{{ isMarcar }}" onChange="{{ goMarcar }}" />Marcar asistencia</label>
+      <label class="seg-opt"><input type="radio" name="tab" checked="{{ isSemana }}" onChange="{{ goSemana }}" />Resumen semanal</label>
+      <label class="seg-opt"><input type="radio" name="tab" checked="{{ isMes }}" onChange="{{ goMes }}" />Resumen mensual</label>
+      <label class="seg-opt"><input type="radio" name="tab" checked="{{ isPlantilla }}" onChange="{{ goPlantilla }}" />Plantilla</label>
+    </div>
+  </div>
+
+  <!-- ================= MARCAR ASISTENCIA ================= -->
+  <sc-if value="{{ isMarcar }}" hint-placeholder-val="{{ true }}">
+    <div style="max-width:960px;margin:0 auto;padding:var(--space-8) var(--space-6) 60px;">
+      <div style="display:flex;align-items:end;gap:var(--space-4);flex-wrap:wrap;margin-bottom:var(--space-4);">
+        <div class="field">
+          <label>Fecha de entrenamiento</label>
+          <input class="input" type="date" value="{{ selectedDate }}" onChange="{{ dateInputChange }}" />
+        </div>
+        <div class="text-muted" style="font-size:14px;text-transform:capitalize;padding-bottom:8px;">{{ selectedDateLabel }}</div>
+        <div style="display:flex;gap:var(--space-2);margin-left:auto;padding-bottom:2px;flex-wrap:wrap;">
+          <button class="btn btn-secondary" onClick="{{ markAllPresentClick }}">Todos presentes</button>
+          <button class="btn btn-ghost" onClick="{{ clearDayClick }}">Limpiar</button>
+          <button class="btn btn-secondary" onClick="{{ exportDayCSV }}">Excel del día</button>
+          <button class="btn btn-primary" onClick="{{ exportDayPDF }}">PDF del día</button>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:2px;background:var(--color-divider);border:2px solid var(--color-divider);margin-bottom:var(--space-6);">
+        <div style="background:var(--color-bg);padding:var(--space-3) var(--space-4);">
+          <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-accent);">Presentes</div>
+          <div style="font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:26px;">{{ presentCount }}</div>
+        </div>
+        <div style="background:var(--color-bg);padding:var(--space-3) var(--space-4);">
+          <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-accent);">Ausentes</div>
+          <div style="font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:26px;">{{ absentCount }}</div>
+        </div>
+        <div style="background:var(--color-bg);padding:var(--space-3) var(--space-4);">
+          <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-accent);">Sin marcar</div>
+          <div style="font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:26px;">{{ unmarkedCount }}</div>
+        </div>
+      </div>
+
+      <div style="border-top:2px solid var(--color-divider);">
+        <sc-for list="{{ markingRows }}" as="row" hint-placeholder-count="20">
+          <div style="display:flex;align-items:center;gap:var(--space-4);padding:var(--space-3) var(--space-1);border-bottom:1px solid var(--color-divider);flex-wrap:wrap;">
+            <div style="flex:1;min-width:160px;">
+              <div style="font-size:15px;font-weight:600;">{{ row.name }}</div>
+              <div style="display:flex;gap:var(--space-1);margin-top:3px;">
+                <span class="tag tag-neutral">{{ row.category }}</span>
+                <span class="tag tag-outline">{{ row.position }}</span>
+              </div>
+            </div>
+            <div class="seg" style="flex:none;">
+              <label class="seg-opt"><input type="radio" name="mark-{{ row.id }}" checked="{{ row.isPresent }}" onChange="{{ row.setPresent }}" />Presente</label>
+              <label class="seg-opt"><input type="radio" name="mark-{{ row.id }}" checked="{{ row.isAbsent }}" onChange="{{ row.setAbsent }}" />Ausente</label>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ================= RESUMEN SEMANAL ================= -->
+  <sc-if value="{{ isSemana }}" hint-placeholder-val="{{ false }}">
+    <div style="max-width:1080px;margin:0 auto;padding:var(--space-8) var(--space-6) 60px;">
+      <div style="display:flex;align-items:end;gap:var(--space-4);flex-wrap:wrap;margin-bottom:var(--space-2);">
+        <div class="field">
+          <label>Cualquier fecha de la semana</label>
+          <input class="input" type="date" value="{{ weekPick }}" onChange="{{ weekInputChange }}" />
+        </div>
+        <div class="text-muted" style="font-size:14px;padding-bottom:8px;">Semana: {{ weekRangeLabel }}</div>
+        <div style="display:flex;gap:var(--space-2);margin-left:auto;padding-bottom:2px;">
+          <button class="btn btn-secondary" onClick="{{ exportWeekCSV }}">Excel (.csv)</button>
+          <button class="btn btn-primary" onClick="{{ exportWeekPDF }}">PDF</button>
+        </div>
+      </div>
+      <div class="text-muted" style="font-size:12px;margin-bottom:var(--space-4);">Sesiones registradas: {{ weekSessionsLabel }}</div>
+
+      <div style="overflow-x:auto;">
+      <table class="table" style="min-width:560px;">
+        <thead>
+          <tr>
+            <th>Jugador</th><th>Categoría</th><th style="text-align:center;">Sesiones</th><th style="text-align:center;">Presentes</th><th style="text-align:center;">Ausentes</th><th style="text-align:right;">Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          <sc-for list="{{ weekRows }}" as="row" hint-placeholder-count="20">
+            <tr>
+              <td style="font-weight:600;">{{ row.name }}</td>
+              <td>{{ row.category }}</td>
+              <td style="text-align:center;">{{ row.sessions }}</td>
+              <td style="text-align:center;">{{ row.present }}</td>
+              <td style="text-align:center;">{{ row.absent }}</td>
+              <td style="text-align:right;"><span class="tag {{ row.pctClass }}">{{ row.pctLabel }}</span></td>
+            </tr>
+          </sc-for>
+        </tbody>
+      </table>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ================= RESUMEN MENSUAL ================= -->
+  <sc-if value="{{ isMes }}" hint-placeholder-val="{{ false }}">
+    <div style="max-width:1080px;margin:0 auto;padding:var(--space-8) var(--space-6) 60px;">
+      <div style="display:flex;align-items:end;gap:var(--space-4);flex-wrap:wrap;margin-bottom:var(--space-4);">
+        <div class="field">
+          <label>Mes</label>
+          <input class="input" type="month" value="{{ monthPick }}" onChange="{{ monthInputChange }}" />
+        </div>
+        <div style="display:flex;gap:var(--space-2);margin-left:auto;padding-bottom:2px;">
+          <button class="btn btn-secondary" onClick="{{ exportMonthCSV }}">Excel (.csv)</button>
+          <button class="btn btn-primary" onClick="{{ exportMonthPDF }}">PDF</button>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:2px;background:var(--color-divider);border:2px solid var(--color-divider);margin-bottom:var(--space-6);">
+        <div style="background:var(--color-bg);padding:var(--space-3) var(--space-4);">
+          <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-accent);">Sesiones en el mes</div>
+          <div style="font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:26px;">{{ monthSessionsCount }}</div>
+        </div>
+        <div style="background:var(--color-bg);padding:var(--space-3) var(--space-4);">
+          <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-accent);">Score promedio</div>
+          <div style="font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:26px;">{{ monthAvgLabel }}</div>
+        </div>
+        <div style="background:var(--color-bg);padding:var(--space-3) var(--space-4);">
+          <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-accent);">Bajo 70% asistencia</div>
+          <div style="font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:26px;">{{ monthLowCount }}</div>
+        </div>
+      </div>
+
+      <div style="overflow-x:auto;">
+      <table class="table" style="min-width:560px;">
+        <thead>
+          <tr>
+            <th>Jugador</th><th>Posición</th><th style="text-align:center;">Sesiones</th><th style="text-align:center;">Presentes</th><th style="text-align:center;">Ausentes</th><th style="text-align:right;">Score mensual</th>
+          </tr>
+        </thead>
+        <tbody>
+          <sc-for list="{{ monthRows }}" as="row" hint-placeholder-count="20">
+            <tr>
+              <td style="font-weight:600;">{{ row.name }}</td>
+              <td>{{ row.position }}</td>
+              <td style="text-align:center;">{{ row.sessions }}</td>
+              <td style="text-align:center;">{{ row.present }}</td>
+              <td style="text-align:center;">{{ row.absent }}</td>
+              <td style="text-align:right;"><span class="tag {{ row.pctClass }}">{{ row.pctLabel }}</span></td>
+            </tr>
+          </sc-for>
+        </tbody>
+      </table>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ================= PLANTILLA ================= -->
+  <sc-if value="{{ isPlantilla }}" hint-placeholder-val="{{ false }}">
+    <div style="max-width:900px;margin:0 auto;padding:var(--space-8) var(--space-6) 60px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-4);">
+        <h3 style="margin:0;">Jugadores ({{ rosterCount }})</h3>
+        <button class="btn btn-primary" onClick="{{ addPlayerClick }}">+ Agregar jugador</button>
+      </div>
+      <sc-for list="{{ rosterRows }}" as="row" hint-placeholder-count="20">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:var(--space-2);align-items:center;padding:var(--space-2) 0;border-bottom:1px solid var(--color-divider);">
+          <input class="input" value="{{ row.name }}" onChange="{{ row.onName }}" />
+          <input class="input" value="{{ row.category }}" onChange="{{ row.onCategory }}" placeholder="U16" />
+          <select class="input" value="{{ row.position }}" onChange="{{ row.onPosition }}">
+            <option value="Portero">Portero</option>
+            <option value="Defensa">Defensa</option>
+            <option value="Mediocampista">Mediocampista</option>
+            <option value="Delantero">Delantero</option>
+          </select>
+          <button class="btn btn-ghost" onClick="{{ row.onRemove }}">Quitar</button>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const POSITIONS = ["Portero", "Defensa", "Mediocampista", "Delantero"];
+const NAMES = ["Marco Barrena","George Bell","Oliver Montañés","Mia Medina","Ilajah Hanson","Emiliano Soto","Adan Rodriguez","Brayan Rodriguez","Matias Paliche","Kevin Canales","Matias Linares","Leonardo Pedrosso","Juan Bastidas","Kenit Kishare","Jeromimo Ordoñez","Junes Mohammed","Jesuel Perez","Jahil Taylor","Joshua Rodriguez","Ruben Colmenares","Santiago Villegas"];
+const STORE_KEY = "isu_attendance_v1";
+
+function defaultRoster() {
+  return NAMES.map((name, i) => ({
+    id: "p" + (i + 1), name,
+    category: ["U14", "U15", "U16", "U17"][i % 4],
+    position: i % 7 === 0 ? "Portero" : POSITIONS[(i % 3) + 1]
+  }));
+}
+
+function isoToday() {
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+function isoMonth() { return isoToday().slice(0, 7); }
+function parseISO(s) { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); }
+function toISO(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+function mondayOf(iso) {
+  const d = parseISO(iso);
+  const wd = d.getDay();
+  const diff = wd === 0 ? -6 : 1 - wd;
+  d.setDate(d.getDate() + diff);
+  return d;
+}
+function shortDate(iso) { const d = parseISO(iso); return String(d.getDate()).padStart(2, "0") + "/" + String(d.getMonth() + 1).padStart(2, "0"); }
+
+class Component extends DCLogic {
+  state = {
+    roster: defaultRoster(),
+    attendance: {},
+    tab: "marcar",
+    selectedDate: isoToday(),
+    weekPick: isoToday(),
+    monthPick: isoMonth(),
+    loaded: false
+  };
+
+  componentDidMount() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (raw) {
+        const data = JSON.parse(raw);
+        this.setState({
+          roster: data.roster && data.roster.length ? data.roster : defaultRoster(),
+          attendance: data.attendance || {}
+        });
+      }
+    } catch (e) {}
+    this.setState({ loaded: true });
+  }
+
+  persist(partial) {
+    this.setState(partial, () => {
+      try { localStorage.setItem(STORE_KEY, JSON.stringify({ roster: this.state.roster, attendance: this.state.attendance })); } catch (e) {}
+    });
+  }
+
+  setMark(date, playerId, status) {
+    const attendance = { ...this.state.attendance, [date]: { ...(this.state.attendance[date] || {}), [playerId]: status } };
+    this.persist({ attendance });
+  }
+
+  statsForSessions(sessions) {
+    const attendance = this.state.attendance;
+    return this.state.roster.map(p => {
+      let present = 0;
+      sessions.forEach(d => { if ((attendance[d] || {})[p.id] === "present") present++; });
+      const total = sessions.length;
+      const absent = total - present;
+      const pct = total ? Math.round((present / total) * 100) : null;
+      return { ...p, sessions: total, present, absent, pct };
+    });
+  }
+
+  pctClass(pct) {
+    if (pct === null) return "tag-neutral";
+    if (pct >= 85) return "tag-accent";
+    if (pct >= 60) return "tag-outline";
+    return "tag-neutral";
+  }
+
+  buildCSV(sessions, rows, filename) {
+    const header = ["Jugador", "Categoria", "Posicion", ...sessions.map(shortDate), "Sesiones", "Presentes", "Ausentes", "% Asistencia"];
+    const lines = [header.join(",")];
+    const attendance = this.state.attendance;
+    rows.forEach(r => {
+      const marks = sessions.map(d => { const st = (attendance[d] || {})[r.id]; return st === "present" ? "P" : st === "absent" ? "A" : "-"; });
+      lines.push([`"${r.name}"`, r.category, r.position, ...marks, r.sessions, r.present, r.absent, r.pct === null ? "" : r.pct + "%"].join(","));
+    });
+    const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  buildPDF(rows, title, filename) {
+    if (!window.jspdf) { alert("La librería de PDF aún está cargando, intenta de nuevo en unos segundos."); return; }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: "landscape" });
+    doc.setFillColor(236, 48, 19); doc.rect(0, 0, 297, 16, "F");
+    doc.setTextColor(255, 255, 255); doc.setFontSize(15); doc.text("INTER SOCCER USA ACADEMY", 10, 11);
+    doc.setTextColor(32, 30, 29); doc.setFontSize(11); doc.text(title, 10, 24);
+    doc.autoTable({
+      head: [["Jugador", "Categoría", "Posición", "Sesiones", "Presentes", "Ausentes", "Score"]],
+      body: rows.map(r => [r.name, r.category, r.position, r.sessions, r.present, r.absent, r.pct === null ? "—" : r.pct + "%"]),
+      startY: 30,
+      headStyles: { fillColor: [32, 30, 29] },
+      styles: { fontSize: 9 }
+    });
+    doc.save(filename);
+  }
+
+  renderVals() {
+    const s = this.state;
+    const roster = s.roster;
+    const attendance = s.attendance;
+    const selectedDate = s.selectedDate;
+    const dayMarks = attendance[selectedDate] || {};
+
+    const markingRows = roster.map(p => {
+      const status = dayMarks[p.id] || null;
+      return {
+        id: p.id, name: p.name, category: p.category, position: p.position,
+        isPresent: status === "present", isAbsent: status === "absent",
+        setPresent: () => this.setMark(selectedDate, p.id, "present"),
+        setAbsent: () => this.setMark(selectedDate, p.id, "absent")
+      };
+    });
+    const presentCount = roster.filter(p => dayMarks[p.id] === "present").length;
+    const absentCount = roster.filter(p => dayMarks[p.id] === "absent").length;
+    const unmarkedCount = roster.length - presentCount - absentCount;
+    const dayStatsRows = this.statsForSessions([selectedDate]);
+
+    const allSessions = Object.keys(attendance).sort();
+
+    const weekStartD = mondayOf(s.weekPick);
+    const weekEndD = new Date(weekStartD); weekEndD.setDate(weekEndD.getDate() + 6);
+    const weekStart = toISO(weekStartD), weekEnd = toISO(weekEndD);
+    const weekSessions = allSessions.filter(d => d >= weekStart && d <= weekEnd);
+    const weekStatsRows = this.statsForSessions(weekSessions);
+    const weekRows = weekStatsRows.map(r => ({ ...r, pctLabel: r.pct === null ? "—" : r.pct + "%", pctClass: this.pctClass(r.pct) }));
+
+    const monthSessions = allSessions.filter(d => d.slice(0, 7) === s.monthPick);
+    const monthStatsRows = this.statsForSessions(monthSessions);
+    const monthRows = monthStatsRows.map(r => ({ ...r, pctLabel: r.pct === null ? "—" : r.pct + "%", pctClass: this.pctClass(r.pct) }));
+    const withScore = monthStatsRows.filter(r => r.pct !== null);
+    const monthAvg = withScore.length ? Math.round(withScore.reduce((a, r) => a + r.pct, 0) / withScore.length) : null;
+    const monthLowCount = withScore.filter(r => r.pct < 70).length;
+
+    const [my, mm] = s.monthPick.split("-").map(Number);
+    const monthLabel = new Date(my, mm - 1, 1).toLocaleDateString("es-ES", { month: "long", year: "numeric" });
+
+    return {
+      isMarcar: s.tab === "marcar", isSemana: s.tab === "semana", isMes: s.tab === "mes", isPlantilla: s.tab === "plantilla",
+      goMarcar: () => this.setState({ tab: "marcar" }),
+      goSemana: () => this.setState({ tab: "semana" }),
+      goMes: () => this.setState({ tab: "mes" }),
+      goPlantilla: () => this.setState({ tab: "plantilla" }),
+
+      selectedDate,
+      selectedDateLabel: parseISO(selectedDate).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" }),
+      dateInputChange: (e) => this.setState({ selectedDate: e.target.value }),
+      markAllPresentClick: () => {
+        const marks = {}; roster.forEach(p => marks[p.id] = "present");
+        this.persist({ attendance: { ...attendance, [selectedDate]: marks } });
+      },
+      clearDayClick: () => {
+        const a2 = { ...attendance }; delete a2[selectedDate];
+        this.persist({ attendance: a2 });
+      },
+      exportDayCSV: () => this.buildCSV([selectedDate], dayStatsRows, `asistencia_dia_${selectedDate}.csv`),
+      exportDayPDF: () => this.buildPDF(dayStatsRows, `Reporte diario — ${selectedDate}`, `asistencia_dia_${selectedDate}.pdf`),
+      markingRows, presentCount, absentCount, unmarkedCount,
+
+      weekPick: s.weekPick,
+      weekInputChange: (e) => this.setState({ weekPick: e.target.value }),
+      weekRangeLabel: shortDate(weekStart) + " – " + shortDate(weekEnd),
+      weekSessionsLabel: weekSessions.length ? weekSessions.map(shortDate).join(", ") : "sin sesiones registradas",
+      weekRows,
+      exportWeekCSV: () => this.buildCSV(weekSessions, weekStatsRows, `asistencia_semana_${weekStart}.csv`),
+      exportWeekPDF: () => this.buildPDF(weekStatsRows, `Resumen semanal — ${shortDate(weekStart)} al ${shortDate(weekEnd)}`, `asistencia_semana_${weekStart}.pdf`),
+
+      monthPick: s.monthPick,
+      monthInputChange: (e) => this.setState({ monthPick: e.target.value }),
+      monthSessionsCount: monthSessions.length,
+      monthAvgLabel: monthAvg === null ? "—" : monthAvg + "%",
+      monthLowCount,
+      monthRows,
+      exportMonthCSV: () => this.buildCSV(monthSessions, monthStatsRows, `asistencia_mes_${s.monthPick}.csv`),
+      exportMonthPDF: () => this.buildPDF(monthStatsRows, `Resumen mensual — ${monthLabel}`, `asistencia_mes_${s.monthPick}.pdf`),
+
+      rosterCount: roster.length,
+      rosterRows: roster.map(p => ({
+        id: p.id, name: p.name, category: p.category, position: p.position,
+        onName: (e) => this.persist({ roster: roster.map(x => x.id === p.id ? { ...x, name: e.target.value } : x) }),
+        onCategory: (e) => this.persist({ roster: roster.map(x => x.id === p.id ? { ...x, category: e.target.value } : x) }),
+        onPosition: (e) => this.persist({ roster: roster.map(x => x.id === p.id ? { ...x, position: e.target.value } : x) }),
+        onRemove: () => this.persist({ roster: roster.filter(x => x.id !== p.id) })
+      })),
+      addPlayerClick: () => this.persist({ roster: [...roster, { id: "p" + Date.now(), name: "Nuevo jugador", category: "U16", position: "Mediocampista" }] })
+    };
+  }
+}
+
+</script>
+</body>
+</html>
